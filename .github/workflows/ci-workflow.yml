@@ -1,59 +1,20 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-name: ci-workflow
+name: ci-workflow.yml
 
 on: [push, pull_request]
 
-env:
-  DEFAULT_MAVEN_OPTS: >-
-    -Xmx2g
-    -XX:ReservedCodeCacheSize=1g
-    -XX:+UseG1GC
-    -Dorg.slf4j.simpleLogger.defaultLogLevel=WARN
-    -Dhttp.keepAlive=false
-    -Dmaven.wagon.http.pool=false
-  MAVEN_COMMAND: >-
-    mvn package verify
-    -V
-    -D dir-only
-    -D disableXmlReport
-    -nsu
-    -ntp
-    -ff
-  MAVEN_PROFILES: >-
-    -P contrib-check
-    -P include-grpc
-  MAVEN_PROJECTS: >-
-    -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers
-concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  ubuntu-build-en:
-    timeout-minutes: 120
+  custom-maven-build:
     runs-on: ubuntu-latest
-    name: Ubuntu Zulu JDK 11 EN
     steps:
-      - name: System Information
-        run: |
-          cat /proc/cpuinfo
-          cat /proc/meminfo
       - name: Checkout Code
         uses: actions/checkout@v2
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
       - name: Cache Maven Dependencies
         uses: actions/cache@v2
         with:
@@ -62,29 +23,9 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Cache Node Modules
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.npm
-            **/node_modules
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-      - name: Set up Java 11
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - name: Maven Build
-        env:
-          MAVEN_OPTS: >-
-            ${{ env.DEFAULT_MAVEN_OPTS }}
-            -Duser.language=en
-            -Duser.country=AU
-            -Duser.region=AU
-            -Duser.timezone=Australia/Melbourne
-        run: >
-          ${{ env.MAVEN_COMMAND }}
-          ${{ env.MAVEN_PROFILES }}
-          ${{ env.MAVEN_PROJECTS }}
+
+      - name: Maven Clean Install
+        run: mvn clean install -DskipTests -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers -am
+
+      - name: NonDex Test
+        run: mvn -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers edu.illinois:nondex-maven-plugin:2.1.1:nondex -Dtest=org.apache.nifi.ldap.tenants.LdapUserGroupProviderTest#testReferencedUserWithoutDefiningReferencedAttribute -DnondexRuns=10
