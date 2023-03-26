@@ -3,7 +3,7 @@ name: ci-workflow.yml
 on: [push, pull_request]
 
 jobs:
-  custom-maven-build:
+  nifi-ldap-flaky:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
