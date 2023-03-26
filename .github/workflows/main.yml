@@ -37,7 +37,11 @@ env:
     -P contrib-check
     -P include-grpc
   MAVEN_PROJECTS: >-
-    -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers
+    -pl -nifi-assembly
+    -pl -nifi-toolkit/nifi-toolkit-assembly
+    -pl -nifi-registry/nifi-registry-assembly
+    -pl -minifi/minifi-assembly
+    -pl -nifi-system-tests
 concurrency:
   group: ${{ github.ref }}
   cancel-in-progress: true
@@ -88,3 +92,12 @@ jobs:
           ${{ env.MAVEN_COMMAND }}
           ${{ env.MAVEN_PROFILES }}
           ${{ env.MAVEN_PROJECTS }}
+      - name: Maven Clean Install
+        run: >
+          mvn clean install -DskipTests
+          -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers -am
+      - name: NonDex Test
+        run: >
+          mvn -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers edu.illinois:nondex-maven-plugin:2.1.1:nondex
+          -Dtest=org.apache.nifi.ldap.tenants.LdapUserGroupProviderTest#testReferencedUserWithoutDefiningReferencedAttribute
+          -DnondexRuns=10
