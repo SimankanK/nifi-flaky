@@ -1,9 +1,9 @@
-name: ci-workflow.yml
+name: ci-build-nondex.yml
 
 on: [push, pull_request]
 
 jobs:
-  nifi-ldap-flaky:
+  nifi-ldap-nondex:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
