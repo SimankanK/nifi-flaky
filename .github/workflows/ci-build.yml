@@ -1,0 +1,31 @@
+name: ci-build.yml
+
+on: [push, pull_request]
+
+jobs:
+  nifi-ldap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Maven Clean Install
+        run: mvn clean install -DskipTests -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers -am
+
+      - name: Normal Test
+        run: mvn -pl nifi-nar-bundles/nifi-ldap-iaa-providers-bundle/nifi-ldap-iaa-providers test -Dtest=org.apache.nifi.ldap.tenants.LdapUserGroupProviderTest#testReferencedUserWithoutDefiningReferencedAttribute
